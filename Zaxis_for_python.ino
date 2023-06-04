@@ -10,7 +10,10 @@ receive:
                 -data[1]: アーム移動位置の10の位
                 -data[2]: アーム移動位置の1の位
                 -data[3]: アーム移動位置の1/10の位
-                -data[4]: 入力終了判定の','
+                -data[4]: 前回のアームの位置の10の位
+                -data[5]: 前回のアームの位置の1の位
+                -data[6]: 前回のアームの位置の1/10の位
+                -data[7]: 入力終了判定の','
         
 send:
         Finish_flag
@@ -82,7 +85,7 @@ float Conversion(int num1, int num2, int num3){
   return Num;
 }
 
-int sendPulse(float target){
+int sendPulse(float target, float preLocation){
   // rpm設定
   myStepperCW.setSpeed(cwSpeed);
   myStepperCCW.setSpeed(cwSpeed);
@@ -132,13 +135,16 @@ void Initialize(float target){
   myStepperCCW.setSpeed(initialSpeed);
 
   while(digitalRead(sw_d) == HIGH){
-    myStepperCW.step(1);
+    myStepperCW.step(250);
+    // delay(1)を入れることで、確実にリミットスイッチまで移動させるようにする。
+    // 代償として、異音が発生する。
+    delay(1);
   }
   
   preLocation = 0.0;
 
   delay(250);  
-  sendPulse(target);
+  sendPulse(target, preLocation);
 }
 
 void loop() {
@@ -147,6 +153,7 @@ void loop() {
     if(data[count] == ','){
 
       float target = Conversion(data[1], data[2], data[3]);
+      float preLocation = Conversion(data[4], data[5], data[6]);
 
       // I: Initialize
       if(data[0] == 'I'){
@@ -159,7 +166,7 @@ void loop() {
       // T: Move target position
       else if(data[0] == 'T'){
         // 動作
-        sendPulse(target);
+        sendPulse(target, preLocation);
         // 動作終了後
         Serial.println("Target_finish");
       }
